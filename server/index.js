@@ -197,6 +197,11 @@ app.post('/api/rooms/:code/join', async (req, res) => {
 
     const room = roomResult.rows[0];
 
+    // Verificar se a sala está configurada
+    if (room.is_configuring) {
+      return res.status(400).json({ error: 'Sala ainda está sendo configurada pelo criador' });
+    }
+
     // Verificar se o usuário existe
     const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
     
@@ -224,7 +229,7 @@ app.post('/api/rooms/:code/join', async (req, res) => {
   }
 });
 
-// Obter perguntas da sala
+// Obter perguntas da sala (nova estrutura)
 app.get('/api/rooms/:code/questions', async (req, res) => {
   try {
     const roomCode = req.params.code;
@@ -239,40 +244,114 @@ app.get('/api/rooms/:code/questions', async (req, res) => {
       [roomResult.rows[0].id]
     );
 
-    res.json(questionsResult.rows);
+    // Buscar alternativas para cada pergunta
+    const questionsWithAnswers = [];
+    for (const question of questionsResult.rows) {
+      const alternativesResult = await pool.query(
+        'SELECT * FROM alternatives WHERE question_id = $1 ORDER BY id',
+        [question.id]
+      );
+      
+      questionsWithAnswers.push({
+        ...question,
+        alternatives: alternativesResult.rows
+      });
+    }
+
+    res.json(questionsWithAnswers);
   } catch (error) {
     console.error('Erro ao buscar perguntas:', error);
     res.status(500).json({ error: 'Erro ao buscar perguntas' });
   }
 });
 
-// Criar pergunta
+// Criar pergunta com alternativas (nova estrutura)
 app.post('/api/rooms/:code/questions', async (req, res) => {
   try {
     const roomCode = req.params.code;
-    const { question, options, correct_answer, time_limit = 30 } = req.body;
+    const { question, answers, correct_answer } = req.body;
 
-    const roomResult = await pool.query('SELECT id FROM quiz_rooms WHERE code = $1', [roomCode]);
+    // Verificar se a sala existe e se o usuário é o dono
+    const roomResult = await pool.query('SELECT * FROM quiz_rooms WHERE code = $1', [roomCode]);
     if (roomResult.rows.length === 0) {
       return res.status(404).json({ error: 'Sala não encontrada' });
     }
 
+    const room = roomResult.rows[0];
+    
+    // Verificar se a sala ainda está em configuração
+    if (!room.is_configuring) {
+      return res.status(400).json({ error: 'Sala já está aberta para jogar' });
+    }
+
+    // Criar a pergunta
     const result = await pool.query(
-      'INSERT INTO questions (room_id, question, options, correct_answer, time_limit) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [roomResult.rows[0].id, question, JSON.stringify(options), correct_answer, time_limit]
+      'INSERT INTO questions (room_id, question_text) VALUES ($1, $2) RETURNING *',
+      [room.id, question]
     );
 
-    res.json(result.rows[0]);
+    const newQuestion = result.rows[0];
+
+    // Criar as alternativas
+    for (let i = 0; i < answers.length; i++) {
+      await pool.query(
+        'INSERT INTO alternatives (question_id, text, is_correct) VALUES ($1, $2, $3)',
+        [result.rows[0].id, answers[i], i === correct_answer ? true : false]
+      );
+    }
+
+    res.json(newQuestion);
   } catch (error) {
     console.error('Erro ao criar pergunta:', error);
     res.status(500).json({ error: 'Erro ao criar pergunta' });
   }
 });
 
+// Finalizar configuração da sala (abrir para jogar)
+app.post('/api/rooms/:code/finalize', async (req, res) => {
+  try {
+    const roomCode = req.params.code;
+    const { userId } = req.body;
+
+    // Verificar se a sala existe e se o usuário é o dono
+    const roomResult = await pool.query('SELECT * FROM quiz_rooms WHERE code = $1', [roomCode]);
+    if (roomResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Sala não encontrada' });
+    }
+
+    const room = roomResult.rows[0];
+    
+    if (room.created_by !== userId) {
+      return res.status(403).json({ error: 'Apenas o criador da sala pode finalizar a configuração' });
+    }
+
+    // Verificar se tem pelo menos uma pergunta
+    const countResult = await pool.query(
+      'SELECT COUNT(*) as count FROM questions WHERE room_id = $1',
+      [room.id]
+    );
+
+    if (parseInt(countResult.rows[0].count) === 0) {
+      return res.status(400).json({ error: 'Adicione pelo menos uma pergunta antes de abrir a sala' });
+    }
+
+    // Atualizar status da sala
+    await pool.query(
+      'UPDATE quiz_rooms SET is_configuring = false, status = $1 WHERE code = $2',
+      ['waiting', roomCode]
+    );
+
+    res.json({ success: true, message: 'Sala aberta para jogar!' });
+  } catch (error) {
+    console.error('Erro ao finalizar sala:', error);
+    res.status(500).json({ error: 'Erro ao finalizar sala' });
+  }
+});
+
 // Enviar resposta
 app.post('/api/answers', async (req, res) => {
   try {
-    const { userId, roomCode, questionId, answer, timeSpent } = req.body;
+    const { userId, roomCode, questionId, alternativeId, timeSpent } = req.body;
 
     const roomResult = await pool.query('SELECT id FROM quiz_rooms WHERE code = $1', [roomCode]);
     if (roomResult.rows.length === 0) {
@@ -284,45 +363,25 @@ app.post('/api/answers', async (req, res) => {
       return res.status(404).json({ error: 'Pergunta não encontrada' });
     }
 
-    const isCorrect = questionResult.rows[0].correct_answer === answer;
+    // Buscar a alternativa selecionada
+    const alternativeResult = await pool.query('SELECT * FROM alternatives WHERE id = $1', [alternativeId]);
+    if (alternativeResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Alternativa não encontrada' });
+    }
+
+    const selectedAlternative = alternativeResult.rows[0];
+    const isCorrect = selectedAlternative.is_correct;
     const points = isCorrect ? Math.max(10 - Math.floor(timeSpent / 3), 1) : 0;
 
     const result = await pool.query(
-      'INSERT INTO answers (user_id, room_id, question_id, answer, is_correct, points, time_spent) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-      [userId, roomResult.rows[0].id, questionId, answer, isCorrect, points, timeSpent]
+      'INSERT INTO user_answers (user_id, room_id, question_id, alternative_id, is_correct, answered_at) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP) RETURNING *',
+      [userId, roomResult.rows[0].id, questionId, alternativeId, isCorrect]
     );
 
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Erro ao enviar resposta:', error);
     res.status(500).json({ error: 'Erro ao enviar resposta' });
-  }
-});
-
-// Obter estatísticas do usuário
-app.get('/api/rooms/:code/users/:userId/stats', async (req, res) => {
-  try {
-    const { code, userId } = req.params;
-
-    const roomResult = await pool.query('SELECT id FROM quiz_rooms WHERE code = $1', [code]);
-    if (roomResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Sala não encontrada' });
-    }
-
-    const statsResult = await pool.query(`
-      SELECT 
-        COUNT(*) as total_answers,
-        SUM(CASE WHEN is_correct THEN 1 ELSE 0 END) as correct_answers,
-        SUM(points) as total_points,
-        AVG(time_spent) as avg_time
-      FROM answers 
-      WHERE user_id = $1 AND room_id = $2
-    `, [userId, roomResult.rows[0].id]);
-
-    res.json(statsResult.rows[0]);
-  } catch (error) {
-    console.error('Erro ao buscar estatísticas:', error);
-    res.status(500).json({ error: 'Erro ao buscar estatísticas' });
   }
 });
 
@@ -341,12 +400,12 @@ app.get('/api/rooms/:code/ranking', async (req, res) => {
         u.id,
         u.name,
         u.avatar,
-        SUM(a.points) as total_points,
-        COUNT(a.id) as total_answers,
-        SUM(CASE WHEN a.is_correct THEN 1 ELSE 0 END) as correct_answers
+        COALESCE(SUM(CASE WHEN ua.is_correct THEN 10 ELSE 0 END), 0) as total_points,
+        COUNT(ua.id) as total_answers,
+        COALESCE(SUM(CASE WHEN ua.is_correct THEN 1 ELSE 0 END), 0) as correct_answers
       FROM users u
-      LEFT JOIN answers a ON u.id = a.user_id AND a.room_id = $1
-      WHERE u.id IN (SELECT user_id FROM room_participants WHERE room_id = $1)
+      INNER JOIN room_participants rp ON u.id = rp.user_id AND rp.room_id = $1
+      LEFT JOIN user_answers ua ON u.id = ua.user_id AND ua.room_id = $1
       GROUP BY u.id, u.name, u.avatar
       ORDER BY total_points DESC
     `, [roomResult.rows[0].id]);
@@ -449,16 +508,16 @@ app.get('/api/rooms/:code/questions', async (req, res) => {
              json_agg(
                json_build_object(
                  'id', a.id,
-                 'text', a.alternative_text,
+                 'text', a.text,
                  'isCorrect', a.is_correct,
-                 'order', a.alternative_order
-               ) ORDER BY a.alternative_order
+                 'order', a.id
+               ) ORDER BY a.id
              ) as alternatives
       FROM questions q
       LEFT JOIN alternatives a ON q.id = a.question_id
       WHERE q.room_id = $1
       GROUP BY q.id
-      ORDER BY q.question_order
+      ORDER BY q.id
     `, [roomId]);
 
     res.json(questionsResult.rows);
@@ -491,24 +550,27 @@ app.post('/api/answers', async (req, res) => {
 
     const isCorrect = altResult.rows[0].is_correct;
 
-    // Salvar resposta
-    await pool.query(
-      'INSERT INTO user_answers (room_id, user_id, question_id, alternative_id, is_correct) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (room_id, user_id, question_id) DO UPDATE SET alternative_id = $4, is_correct = $5, answered_at = CURRENT_TIMESTAMP',
-      [roomId, userId, questionId, alternativeId, isCorrect]
-    );
+    // Salvar resposta (permite atualizar se já existir)
+    await pool.query(`
+      INSERT INTO user_answers (room_id, user_id, question_id, alternative_id, is_correct, answered_at) 
+      VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+      ON CONFLICT (user_id, room_id, question_id) 
+      DO UPDATE SET 
+        alternative_id = EXCLUDED.alternative_id,
+        is_correct = EXCLUDED.is_correct,
+        answered_at = EXCLUDED.answered_at
+    `, [roomId, userId, questionId, alternativeId, isCorrect]);
 
-    // Atualizar pontuação do participante
-    if (isCorrect) {
-      await pool.query(
-        'UPDATE room_participants SET score = score + 10, correct_answers = correct_answers + 1, total_answers = total_answers + 1 WHERE room_id = $1 AND user_id = $2',
-        [roomId, userId]
-      );
-    } else {
-      await pool.query(
-        'UPDATE room_participants SET total_answers = total_answers + 1 WHERE room_id = $1 AND user_id = $2',
-        [roomId, userId]
-      );
-    }
+    // Recalcular estatísticas do participante baseado em TODAS as respostas
+    await pool.query(`
+      INSERT INTO room_participants (room_id, user_id, score, correct_answers, total_answers, joined_at)
+      VALUES ($1, $2, 0, 0, 0, CURRENT_TIMESTAMP)
+      ON CONFLICT (room_id, user_id) 
+      DO UPDATE SET 
+        score = (SELECT COALESCE(SUM(CASE WHEN is_correct THEN 10 ELSE 0 END), 0) FROM user_answers WHERE user_id = $2 AND room_id = $1),
+        correct_answers = (SELECT COALESCE(SUM(CASE WHEN is_correct THEN 1 ELSE 0 END), 0) FROM user_answers WHERE user_id = $2 AND room_id = $1),
+        total_answers = (SELECT COUNT(*) FROM user_answers WHERE user_id = $2 AND room_id = $1)
+    `, [roomId, userId]);
 
     // Notificar outros usuários
     io.to(roomCode).emit('answer-submitted', {
@@ -538,17 +600,24 @@ app.get('/api/rooms/:code/ranking', async (req, res) => {
 
     const roomId = roomResult.rows[0].id;
 
-    // Obter ranking
+    // Obter ranking baseado em user_answers
     const rankingResult = await pool.query(`
-      SELECT u.name, u.avatar, rp.score, rp.correct_answers, rp.total_answers,
-             CASE 
-               WHEN rp.total_answers > 0 THEN ROUND((rp.correct_answers::float / rp.total_answers) * 100, 1)
-               ELSE 0
-             END as accuracy
+      SELECT 
+        u.name, 
+        u.avatar, 
+        COALESCE(SUM(CASE WHEN ua.is_correct THEN 10 ELSE 0 END), 0) as score,
+        COALESCE(SUM(CASE WHEN ua.is_correct THEN 1 ELSE 0 END), 0) as correct_answers,
+        COUNT(ua.id) as total_answers,
+        CASE 
+          WHEN COUNT(ua.id) > 0 THEN ROUND((SUM(CASE WHEN ua.is_correct THEN 1 ELSE 0 END)::float / COUNT(ua.id)) * 100, 1)
+          ELSE 0
+        END as accuracy
       FROM room_participants rp
       JOIN users u ON rp.user_id = u.id
+      LEFT JOIN user_answers ua ON u.id = ua.user_id AND ua.room_id = $1
       WHERE rp.room_id = $1
-      ORDER BY rp.score DESC, rp.correct_answers DESC
+      GROUP BY u.id, u.name, u.avatar
+      ORDER BY score DESC, correct_answers DESC
     `, [roomId]);
 
     res.json(rankingResult.rows);
@@ -626,17 +695,23 @@ app.get('/api/rooms/:code/users/:userId/stats', async (req, res) => {
 
     const roomId = roomResult.rows[0].id;
 
-    // Obter estatísticas do usuário
+    // Obter estatísticas do usuário baseado em user_answers
     const statsResult = await pool.query(`
-      SELECT u.name, u.avatar, rp.score, rp.correct_answers, rp.total_answers,
-             CASE 
-               WHEN rp.total_answers > 0 THEN ROUND((rp.correct_answers::float / rp.total_answers) * 100, 1)
-               ELSE 0
-             END as accuracy,
-             (SELECT COUNT(*) FROM questions WHERE room_id = $1) as total_questions
-      FROM room_participants rp
-      JOIN users u ON rp.user_id = u.id
-      WHERE rp.room_id = $1 AND rp.user_id = $2
+      SELECT 
+        u.name, 
+        u.avatar,
+        COALESCE(SUM(CASE WHEN ua.is_correct THEN 10 ELSE 0 END), 0) as score,
+        COALESCE(SUM(CASE WHEN ua.is_correct THEN 1 ELSE 0 END), 0) as correct_answers,
+        COUNT(ua.id) as total_answers,
+        CASE 
+          WHEN COUNT(ua.id) > 0 THEN ROUND((SUM(CASE WHEN ua.is_correct THEN 1 ELSE 0 END)::float / COUNT(ua.id)) * 100, 1)
+          ELSE 0
+        END as accuracy,
+        (SELECT COUNT(*) FROM questions WHERE room_id = $1) as total_questions
+      FROM users u
+      LEFT JOIN user_answers ua ON u.id = ua.user_id AND ua.room_id = $1
+      WHERE u.id = $2
+      GROUP BY u.id, u.name, u.avatar
     `, [roomId, userId]);
 
     if (statsResult.rows.length === 0) {

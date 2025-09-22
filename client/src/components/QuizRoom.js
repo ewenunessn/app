@@ -53,8 +53,10 @@ function QuizRoom({ user }) {
   }, [roomCode]);
 
   useEffect(() => {
-    fetchRoomData();
-  }, []);
+    if (roomCode) {
+      fetchRoomData();
+    }
+  }, [roomCode]);
 
   useEffect(() => {
     let timer;
@@ -78,7 +80,10 @@ function QuizRoom({ user }) {
       const questionsResponse = await fetch(`http://localhost:5000/api/rooms/${roomCode}/questions`);
       if (questionsResponse.ok) {
         const questionsData = await questionsResponse.json();
+        console.log('Perguntas carregadas:', questionsData);
         setQuestions(questionsData);
+      } else {
+        console.error('Erro ao carregar perguntas:', questionsResponse.status);
       }
 
       // Entrar na sala
@@ -99,6 +104,12 @@ function QuizRoom({ user }) {
 
   const handleAnswerSubmit = async (alternativeId) => {
     if (hasAnswered) return;
+    
+    // Verificar se as perguntas estão carregadas
+    if (!questions || questions.length === 0 || !questions[currentQuestionIndex]) {
+      console.error('Perguntas não carregadas corretamente');
+      return;
+    }
 
     setSelectedAnswer(alternativeId);
     setHasAnswered(true);
@@ -226,12 +237,8 @@ function QuizRoom({ user }) {
               <div className="stat-card">
                 <h3>Acertos</h3>
                 <p className="stat-value">
-                  {userStats?.correct_answers || 0}/{userStats?.total_questions || 0}
+                  {userStats?.correct_answers || 0}/{userStats?.total_answers || 0}
                 </p>
-              </div>
-              <div className="stat-card">
-                <h3>Precisão</h3>
-                <p className="stat-value">{userStats?.accuracy || 0}%</p>
               </div>
             </div>
             
@@ -244,17 +251,14 @@ function QuizRoom({ user }) {
           <div className="ranking-section">
             <h3>Ranking Final</h3>
             <div className="ranking-list">
-              {ranking.map((participant, index) => (
+              {ranking && ranking.length > 0 && ranking.map((participant, index) => (
                 <div key={index} className={`ranking-item ${participant.name === user.name ? 'current-user' : ''}`}>
                   <div className="rank-position">
                     {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
                   </div>
                   <div className="rank-info">
                     <span className="rank-name">{participant.name}</span>
-                    <span className="rank-score">{participant.score} pts</span>
-                  </div>
-                  <div className="rank-accuracy">
-                    {participant.accuracy}% acerto
+                    <span className="rank-score">{participant.score}</span>
                   </div>
                 </div>
               ))}
@@ -300,7 +304,37 @@ function QuizRoom({ user }) {
   }
 
   // Estado do quiz ativo
-  if (room?.status === 'active' && questions.length > 0) {
+  if (room?.status === 'active') {
+    // Verificar se as perguntas estão carregadas
+    if (!questions || questions.length === 0) {
+      return (
+        <div className="quiz-room active">
+          <div className="question-container">
+            <h3>Aguardando perguntas...</h3>
+            <p>As perguntas não foram carregadas corretamente.</p>
+            <button onClick={() => fetchRoomData()} className="retry-button">
+              Tentar Novamente
+            </button>
+          </div>
+        </div>
+      );
+    }
+    
+    // Verificar se o índice atual é válido
+    if (currentQuestionIndex < 0 || currentQuestionIndex >= questions.length) {
+      return (
+        <div className="quiz-room active">
+          <div className="question-container">
+            <h3>Erro no carregamento</h3>
+            <p>Índice de pergunta inválido.</p>
+            <button onClick={() => navigate('/dashboard')} className="back-button">
+              Voltar ao Dashboard
+            </button>
+          </div>
+        </div>
+      );
+    }
+    
     const currentQuestion = questions[currentQuestionIndex];
     
     return (
@@ -318,7 +352,7 @@ function QuizRoom({ user }) {
           <h3 className="question-text">{currentQuestion.question_text}</h3>
           
           <div className="alternatives-grid">
-            {currentQuestion.alternatives.map((alternative) => (
+            {currentQuestion && currentQuestion.alternatives && currentQuestion.alternatives.length > 0 && currentQuestion.alternatives.map((alternative) => (
               <button
                 key={alternative.id}
                 className={`alternative-button ${
@@ -338,7 +372,9 @@ function QuizRoom({ user }) {
 
           {hasAnswered && (
             <div className="answer-feedback">
-              {questions[currentQuestionIndex].alternatives.find(a => a.id === selectedAnswer)?.is_correct
+              {questions && questions.length > 0 && questions[currentQuestionIndex] && 
+               questions[currentQuestionIndex].alternatives && 
+               questions[currentQuestionIndex].alternatives.find(a => a.id === selectedAnswer)?.is_correct
                 ? '✅ Correto!'
                 : '❌ Incorreto!'}
             </div>

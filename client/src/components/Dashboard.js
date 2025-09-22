@@ -47,7 +47,8 @@ function Dashboard({ user, onLogout }) {
       }
 
       const room = await response.json();
-      navigate(`/room/${room.code}`);
+      // Redirecionar para a tela de configuração da sala
+      navigate(`/room/${room.code}/config`);
     } catch (err) {
       setError('Erro ao criar sala. Tente novamente.');
       console.error('Erro:', err);
@@ -83,7 +84,7 @@ function Dashboard({ user, onLogout }) {
         throw new Error(errorData.error || 'Erro ao entrar na sala');
       }
 
-      navigate(`/room/${roomCode.toUpperCaseCase()}`);
+      navigate(`/room/${roomCode.toUpperCase()}`);
     } catch (err) {
       setError(err.message || 'Erro ao entrar na sala. Verifique o código.');
       console.error('Erro:', err);
@@ -151,7 +152,7 @@ function Dashboard({ user, onLogout }) {
           <div className="rooms-section">
             <h3>Salas Disponíveis</h3>
             <div className="rooms-list">
-              {rooms.map((room) => (
+              {rooms && rooms.length > 0 && rooms.map((room) => (
                 <div 
                   key={room.id} 
                   className="room-card"

@@ -5,6 +5,7 @@ import UserRegistration from './components/UserRegistration';
 import Dashboard from './components/Dashboard';
 import QuizRoom from './components/QuizRoom';
 import QuestionCreator from './components/QuestionCreator';
+import RoomConfig from './components/RoomConfig';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -71,6 +72,14 @@ function App() {
             element={
               user ? 
                 <QuestionCreator user={user} /> : 
+                <Navigate to="/" replace />
+            } 
+          />
+          <Route 
+            path="/room/:roomCode/config" 
+            element={
+              user ? 
+                <RoomConfig user={user} /> : 
                 <Navigate to="/" replace />
             } 
           />

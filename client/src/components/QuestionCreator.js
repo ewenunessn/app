@@ -217,7 +217,7 @@ function QuestionCreator({ user }) {
               </button>
             </div>
 
-            {questions.map((question, questionIndex) => (
+            {questions && questions.length > 0 && questions.map((question, questionIndex) => (
               <div key={questionIndex} className="question-card">
                 <div className="question-header">
                   <h4>Pergunta {questionIndex + 1}</h4>
@@ -246,7 +246,7 @@ function QuestionCreator({ user }) {
                 <div className="alternatives-section">
                   <h5>Alternativas (Marque a correta):</h5>
                   
-                  {question.alternatives.map((alternative, altIndex) => (
+                  {question.alternatives && question.alternatives.length > 0 && question.alternatives.map((alternative, altIndex) => (
                     <div key={altIndex} className="alternative-item">
                       <div className="alternative-radio">
                         <input
