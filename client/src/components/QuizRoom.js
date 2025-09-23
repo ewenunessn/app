@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
+import { API_CONFIG, SOCKET_CONFIG } from '../config';
 import './QuizRoom.css';
 import { debugQuizFinish } from './debug-quiz-finish';
 
@@ -16,7 +17,6 @@ function QuizRoom({ user }) {
   const [timeLeft, setTimeLeft] = useState(30);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [participants, setParticipants] = useState([]);
   const [showResults, setShowResults] = useState(false);
   const [userStats, setUserStats] = useState({
     score: 0,
@@ -30,7 +30,7 @@ function QuizRoom({ user }) {
 
   useEffect(() => {
     // Conectar ao socket
-    const newSocket = io('http://localhost:5000');
+    const newSocket = io(SOCKET_CONFIG.BASE_URL);
     setSocket(newSocket);
 
     // Entrar na sala
@@ -80,13 +80,13 @@ function QuizRoom({ user }) {
   const fetchRoomData = async () => {
     try {
       // Buscar informações da sala
-      const roomResponse = await fetch(`http://localhost:5000/api/rooms/${roomCode}`);
+      const roomResponse = await fetch(`${API_CONFIG.BASE_URL}/api/rooms/${roomCode}`);
       if (!roomResponse.ok) throw new Error('Sala não encontrada');
       const roomData = await roomResponse.json();
       setRoom(roomData);
 
       // Buscar perguntas
-      const questionsResponse = await fetch(`http://localhost:5000/api/rooms/${roomCode}/questions`);
+      const questionsResponse = await fetch(`${API_CONFIG.BASE_URL}/api/rooms/${roomCode}/questions`);
       if (questionsResponse.ok) {
         const questionsData = await questionsResponse.json();
         console.log('Perguntas carregadas:', questionsData);
@@ -96,7 +96,7 @@ function QuizRoom({ user }) {
       }
 
       // Entrar na sala
-      await fetch(`http://localhost:5000/api/rooms/${roomCode}/join`, {
+      await fetch(`${API_CONFIG.BASE_URL}/api/rooms/${roomCode}/join`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -124,7 +124,7 @@ function QuizRoom({ user }) {
     setHasAnswered(true);
 
     try {
-      await fetch('http://localhost:5000/api/answers', {
+      await fetch(`${API_CONFIG.BASE_URL}/api/answers`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -133,7 +133,7 @@ function QuizRoom({ user }) {
           roomCode,
           userId: user.id,
           questionId: questions[currentQuestionIndex].id,
-          alternativeId,
+          alternativeId: alternativeId,
         }),
       });
 
@@ -179,7 +179,7 @@ function QuizRoom({ user }) {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Buscar estatísticas do usuário
-      const statsResponse = await fetch(`http://localhost:5000/api/rooms/${roomCode}/users/${user.id}/stats`);
+      const statsResponse = await fetch(`${API_CONFIG.BASE_URL}/api/rooms/${roomCode}/users/${user.id}/stats`);
       console.log('Resposta stats:', statsResponse.status, statsResponse.statusText);
       
       if (statsResponse.ok) {
@@ -201,7 +201,7 @@ function QuizRoom({ user }) {
       }
 
       // Buscar ranking
-      const rankingResponse = await fetch(`http://localhost:5000/api/rooms/${roomCode}/ranking`);
+      const rankingResponse = await fetch(`${API_CONFIG.BASE_URL}/api/rooms/${roomCode}/ranking`);
       console.log('Resposta ranking:', rankingResponse.status, rankingResponse.statusText);
       
       if (rankingResponse.ok) {
@@ -244,15 +244,7 @@ function QuizRoom({ user }) {
     }
   };
 
-  const handleFinishQuiz = async () => {
-    try {
-      await fetch(`http://localhost:5000/api/rooms/${roomCode}/finish`, {
-        method: 'POST',
-      });
-    } catch (err) {
-      console.error('Erro ao finalizar quiz:', err);
-    }
-  };
+
 
   // Função de debug para testar o carregamento de resultados
   const debugResults = () => {

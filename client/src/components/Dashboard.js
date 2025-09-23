@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_CONFIG } from '../config';
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
 
@@ -15,7 +16,7 @@ function Dashboard({ user, onLogout }) {
 
   const fetchRooms = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/rooms');
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/rooms`);
       if (response.ok) {
         const data = await response.json();
         setRooms(data);
@@ -30,7 +31,7 @@ function Dashboard({ user, onLogout }) {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/rooms', {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/rooms`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -69,7 +70,7 @@ function Dashboard({ user, onLogout }) {
     setError('');
 
     try {
-      const response = await fetch(`http://localhost:5000/api/rooms/${roomCode.toUpperCase()}/join`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/rooms/${roomCode.toUpperCase()}/join`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_CONFIG } from '../config';
 import { useParams, useNavigate } from 'react-router-dom';
 import './RoomConfig.css';
 
@@ -19,7 +20,7 @@ function RoomConfig({ user }) {
 
   const loadQuestions = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/rooms/${roomCode}/questions`);
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/rooms/${roomCode}/questions`);
       if (response.ok) {
         const data = await response.json();
         setQuestions(data);
@@ -54,7 +55,7 @@ function RoomConfig({ user }) {
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/rooms/${roomCode}/questions`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/rooms/${roomCode}/questions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -62,7 +63,7 @@ function RoomConfig({ user }) {
         body: JSON.stringify({
           question: currentQuestion,
           answers: currentAnswers,
-          correct_answer: correctAnswer + 1 // +1 porque no banco é 1-indexado
+          correct_answer: correctAnswer // índice 0-3, não somar +1
         }),
       });
 
@@ -97,7 +98,7 @@ function RoomConfig({ user }) {
     setError('');
 
     try {
-      const response = await fetch(`http://localhost:5000/api/rooms/${roomCode}/finalize`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/rooms/${roomCode}/finalize`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

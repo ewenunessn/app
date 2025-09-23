@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { API_CONFIG } from '../config';
 import './UserRegistration.css';
 
 const avatars = [
@@ -28,7 +29,7 @@ function UserRegistration({ onUserRegistered }) {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/users', {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/users`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

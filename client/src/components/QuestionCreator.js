@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { API_CONFIG } from '../config';
 import { useNavigate } from 'react-router-dom';
 import './QuestionCreator.css';
 
@@ -119,7 +120,7 @@ function QuestionCreator({ user }) {
 
     try {
       // Criar sala
-      const roomResponse = await fetch('http://localhost:5000/api/rooms', {
+      const roomResponse = await fetch(`${API_CONFIG.BASE_URL}/api/rooms`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -139,7 +140,7 @@ function QuestionCreator({ user }) {
 
       // Adicionar perguntas
       for (const question of questions) {
-        const questionResponse = await fetch(`http://localhost:5000/api/rooms/${roomCode}/questions`, {
+        const questionResponse = await fetch(`${API_CONFIG.BASE_URL}/api/rooms/${roomCode}/questions`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

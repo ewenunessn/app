@@ -10,7 +10,17 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://127.0.0.1:3000", "http://127.0.0.1:3001"],
+    origin: [
+      "http://localhost:3000", 
+      "http://localhost:3001", 
+      "http://localhost:3002", 
+      "http://127.0.0.1:3000", 
+      "http://127.0.0.1:3001",
+      "http://192.168.18.12:3000",
+      "http://192.168.18.12:3001",
+      "http://*:3000",
+      "http://*:3001"
+    ],
     methods: ["GET", "POST"],
     credentials: true
   }
@@ -35,13 +45,28 @@ const corsOptions = {
       'http://localhost:3001',
       'http://localhost:3002',
       'http://127.0.0.1:3000',
-      'http://127.0.0.1:3001'
+      'http://127.0.0.1:3001',
+      'http://192.168.18.12:3000',
+      'http://192.168.18.12:3001',
+      /^http:\/\/192\.168\./, // Permitir qualquer IP da rede 192.168.x.x
+      /^http:\/\/10\./, // Permitir qualquer IP da rede 10.x.x.x
+      /^http:\/\/172\.(1[6-9]|2[0-9]|3[01])\./ // Permitir IPs da rede 172.16-31.x.x
     ];
     
     // Permitir requisições sem origin (ex: Postman)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+    // Verificar se a origem está na lista permitida ou corresponde a um padrão regex
+    const isAllowed = allowedOrigins.some(allowed => {
+      if (typeof allowed === 'string') {
+        return allowed === origin;
+      } else if (allowed instanceof RegExp) {
+        return allowed.test(origin);
+      }
+      return false;
+    });
+    
+    if (isAllowed || process.env.NODE_ENV === 'development') {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -348,42 +373,43 @@ app.post('/api/rooms/:code/finalize', async (req, res) => {
   }
 });
 
+// ROTA ANTIGA - DESABILITADA (não atualiza estatísticas)
 // Enviar resposta
-app.post('/api/answers', async (req, res) => {
-  try {
-    const { userId, roomCode, questionId, alternativeId, timeSpent } = req.body;
+// app.post('/api/answers', async (req, res) => {
+//   try {
+//     const { userId, roomCode, questionId, alternativeId, timeSpent } = req.body;
 
-    const roomResult = await pool.query('SELECT id FROM quiz_rooms WHERE code = $1', [roomCode]);
-    if (roomResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Sala não encontrada' });
-    }
+//     const roomResult = await pool.query('SELECT id FROM quiz_rooms WHERE code = $1', [roomCode]);
+//     if (roomResult.rows.length === 0) {
+//       return res.status(404).json({ error: 'Sala não encontrada' });
+//     }
 
-    const questionResult = await pool.query('SELECT * FROM questions WHERE id = $1', [questionId]);
-    if (questionResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Pergunta não encontrada' });
-    }
+//     const questionResult = await pool.query('SELECT * FROM questions WHERE id = $1', [questionId]);
+//     if (questionResult.rows.length === 0) {
+//       return res.status(404).json({ error: 'Pergunta não encontrada' });
+//     }
 
-    // Buscar a alternativa selecionada
-    const alternativeResult = await pool.query('SELECT * FROM alternatives WHERE id = $1', [alternativeId]);
-    if (alternativeResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Alternativa não encontrada' });
-    }
+//     // Buscar a alternativa selecionada
+//     const alternativeResult = await pool.query('SELECT * FROM alternatives WHERE id = $1', [alternativeId]);
+//     if (alternativeResult.rows.length === 0) {
+//       return res.status(404).json({ error: 'Alternativa não encontrada' });
+//     }
 
-    const selectedAlternative = alternativeResult.rows[0];
-    const isCorrect = selectedAlternative.is_correct;
-    const points = isCorrect ? Math.max(10 - Math.floor(timeSpent / 3), 1) : 0;
+//     const selectedAlternative = alternativeResult.rows[0];
+//     const isCorrect = selectedAlternative.is_correct;
+//     const points = isCorrect ? Math.max(10 - Math.floor(timeSpent / 3), 1) : 0;
 
-    const result = await pool.query(
-      'INSERT INTO user_answers (user_id, room_id, question_id, alternative_id, is_correct, answered_at) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP) RETURNING *',
-      [userId, roomResult.rows[0].id, questionId, alternativeId, isCorrect]
-    );
+//     const result = await pool.query(
+//       'INSERT INTO user_answers (user_id, room_id, question_id, alternative_id, is_correct, answered_at) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP) RETURNING *',
+//       [userId, roomResult.rows[0].id, questionId, alternativeId, isCorrect]
+//     );
 
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Erro ao enviar resposta:', error);
-    res.status(500).json({ error: 'Erro ao enviar resposta' });
-  }
-});
+//     res.json(result.rows[0]);
+//   } catch (error) {
+//     console.error('Erro ao enviar resposta:', error);
+//     res.status(500).json({ error: 'Erro ao enviar resposta' });
+//   }
+// });
 
 // Obter ranking da sala
 app.get('/api/rooms/:code/ranking', async (req, res) => {
@@ -609,7 +635,7 @@ app.get('/api/rooms/:code/ranking', async (req, res) => {
         COALESCE(SUM(CASE WHEN ua.is_correct THEN 1 ELSE 0 END), 0) as correct_answers,
         COUNT(ua.id) as total_answers,
         CASE 
-          WHEN COUNT(ua.id) > 0 THEN ROUND((SUM(CASE WHEN ua.is_correct THEN 1 ELSE 0 END)::float / COUNT(ua.id)) * 100, 1)
+          WHEN COUNT(ua.id) > 0 THEN ROUND(CAST((SUM(CASE WHEN ua.is_correct THEN 1 ELSE 0 END)::float / COUNT(ua.id)) * 100 AS numeric), 1)
           ELSE 0
         END as accuracy
       FROM room_participants rp
@@ -704,7 +730,7 @@ app.get('/api/rooms/:code/users/:userId/stats', async (req, res) => {
         COALESCE(SUM(CASE WHEN ua.is_correct THEN 1 ELSE 0 END), 0) as correct_answers,
         COUNT(ua.id) as total_answers,
         CASE 
-          WHEN COUNT(ua.id) > 0 THEN ROUND((SUM(CASE WHEN ua.is_correct THEN 1 ELSE 0 END)::float / COUNT(ua.id)) * 100, 1)
+          WHEN COUNT(ua.id) > 0 THEN ROUND(CAST((SUM(CASE WHEN ua.is_correct THEN 1 ELSE 0 END)::float / COUNT(ua.id)) * 100 AS numeric), 1)
           ELSE 0
         END as accuracy,
         (SELECT COUNT(*) FROM questions WHERE room_id = $1) as total_questions
@@ -725,7 +751,9 @@ app.get('/api/rooms/:code/users/:userId/stats', async (req, res) => {
   }
 });
 
-// Iniciar servidor
-server.listen(port, () => {
+// Iniciar servidor escutando em todas as interfaces de rede
+server.listen(port, '0.0.0.0', () => {
   console.log(`Servidor rodando na porta ${port}`);
+  console.log(`Acesse o servidor em: http://192.168.18.12:${port}`);
+  console.log(`Ou use o IP local da máquina na rede`);
 });
