@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Final do Quiz - Correção</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Teste Final do Quiz - Correção</h1>
+        <p>Este teste verifica se a tela final do quiz agora mostra os dados corretamente.</p>
+        
+        <div class="test-section">
+            <h3>Teste 1: Verificar Endpoints</h3>
+            <p>Testa se os endpoints de estatísticas e ranking estão funcionando:</p>
+            <button class="test-button" onclick="testEndpoints()">Testar Endpoints</button>
+            <div id="results1" class="results"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>Teste 2: Simular Final do Quiz</h3>
+            <p>Simula a chamada que ocorre quando o quiz termina:</p>
+            <button class="test-button" onclick="simulateQuizFinish()">Simular Final</button>
+            <div id="results2" class="results"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>Teste 3: Verificar Dados</h3>
+            <p>Mostra os dados que deveriam aparecer na tela:</p>
+            <button class="test-button" onclick="showExpectedData()">Mostrar Dados Esperados</button>
+            <div id="results3" class="results"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api';
+        const ROOM_CODE = 'I84OGJ';
+        const USER_ID = '23';
+
+        async function testEndpoints() {
+            const resultsDiv = document.getElementById('results1');
+            resultsDiv.innerHTML = 'Testando endpoints...\n';
+            
+            try {
+                // Testar estatísticas
+                const statsResponse = await fetch(`${API_BASE}/rooms/${ROOM_CODE}/users/${USER_ID}/stats`);
+                const statsData = await statsResponse.json();
+                
+                // Testar ranking
+                const rankingResponse = await fetch(`${API_BASE}/rooms/${ROOM_CODE}/ranking`);
+                const rankingData = await rankingResponse.json();
+                
+                resultsDiv.className = 'results success';
+                resultsDiv.innerHTML = `✅ ENDPOINTS FUNCIONANDO!\n\n`;
+                resultsDiv.innerHTML += `📊 Estatísticas: ${JSON.stringify(statsData, null, 2)}\n\n`;
+                resultsDiv.innerHTML += `🏆 Ranking: ${JSON.stringify(rankingData, null, 2)}`;
+                
+            } catch (error) {
+                resultsDiv.className = 'results error';
+                resultsDiv.innerHTML = `❌ ERRO: ${error.message}`;
+            }
+        }
+
+        async function simulateQuizFinish() {
+            const resultsDiv = document.getElementById('results2');
+            resultsDiv.innerHTML = 'Simulando final do quiz...\n';
+            
+            try {
+                // Simular o que acontece no QuizRoom.js
+                resultsDiv.innerHTML += '1. Iniciando carregamento...\n';
+                
+                // Simular delay
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                resultsDiv.innerHTML += '2. Buscando estatísticas...\n';
+                const statsResponse = await fetch(`${API_BASE}/rooms/${ROOM_CODE}/users/${USER_ID}/stats`);
+                const statsData = await statsResponse.json();
+                
+                resultsDiv.innerHTML += '3. Buscando ranking...\n';
+                const rankingResponse = await fetch(`${API_BASE}/rooms/${ROOM_CODE}/ranking`);
+                const rankingData = await rankingResponse.json();
+                
+                resultsDiv.innerHTML += '4. Finalizando...\n';
+                
+                resultsDiv.className = 'results success';
+                resultsDiv.innerHTML += `✅ SIMULAÇÃO COMPLETA!\n\n`;
+                resultsDiv.innerHTML += `📊 Dados do usuário:\n`;
+                resultsDiv.innerHTML += `   • Pontuação: ${statsData.score}\n`;
+                resultsDiv.innerHTML += `   • Acertos: ${statsData.correct_answers}/${statsData.total_answers}\n`;
+                resultsDiv.innerHTML += `   • Precisão: ${statsData.accuracy}%\n\n`;
+                resultsDiv.innerHTML += `🏆 Ranking (${rankingData.length} jogadores):\n`;
+                rankingData.forEach((player, index) => {
+                    resultsDiv.innerHTML += `   ${index + 1}. ${player.name} - ${player.total_points} pts\n`;
+                });
+                
+            } catch (error) {
+                resultsDiv.className = 'results error';
+                resultsDiv.innerHTML += `❌ ERRO NA SIMULAÇÃO: ${error.message}`;
+            }
+        }
+
+        function showExpectedData() {
+            const resultsDiv = document.getElementById('results3');
+            resultsDiv.className = 'results';
+            resultsDiv.innerHTML = `📋 DADOS QUE DEVERIAM APARECER NA TELA FINAL:\n\n`;
+            resultsDiv.innerHTML += `🎯 Estatísticas do Usuário (brenda):\n`;
+            resultsDiv.innerHTML += `   • Pontuação: 10\n`;
+            resultsDiv.innerHTML += `   • Acertos: 1/1\n`;
+            resultsDiv.innerHTML += `   • Precisão: 100.0%\n`;
+            resultsDiv.innerHTML += `   • Total de perguntas: 1\n\n`;
+            resultsDiv.innerHTML += `🏆 Ranking da Sala:\n`;
+            resultsDiv.innerHTML += `   1. brenda (🐸) - 10 pontos\n`;
+            resultsDiv.innerHTML += `   2. Ewerton (🐼) - 0 pontos\n\n`;
+            resultsDiv.innerHTML += `✅ Se a tela final mostrar esses dados, o problema foi resolvido!`;
+        }
+        
+        // Testar automaticamente ao carregar
+        window.onload = function() {
+            console.log('🧪 Página de teste carregada');
+            console.log('📋 Room:', ROOM_CODE, 'User:', USER_ID);
+        };
+    </script>
+</body>
+</html>

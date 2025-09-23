@@ -474,3 +474,29 @@
     font-size: 1.5rem;
   }
 }
+
+/* Results Loading State */
+.results-loading {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.results-loading .loading-spinner {
+  font-size: 4rem;
+  margin-bottom: 30px;
+}
+
+.results-loading p {
+  font-size: 1.5rem;
+  opacity: 0.8;
+}
+
+.no-ranking {
+  text-align: center;
+  padding: 40px 20px;
+  opacity: 0.7;
+}
+
+.no-ranking p {
+  font-size: 1.1rem;
+}

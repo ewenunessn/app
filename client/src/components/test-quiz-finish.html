@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste Quiz Finish</title>
+</head>
+<body>
+    <h1>Teste de Finalização do Quiz</h1>
+    <button onclick="testQuizFinish()">Testar Finalização</button>
+    <div id="result"></div>
+
+    <script>
+        async function testQuizFinish() {
+            const resultDiv = document.getElementById('result');
+            
+            try {
+                // Testar endpoint de estatísticas
+                console.log('Testando endpoint de estatísticas...');
+                const statsResponse = await fetch('http://localhost:5000/api/rooms/I84OGJ/users/23/stats');
+                console.log('Status stats:', statsResponse.status);
+                
+                if (statsResponse.ok) {
+                    const statsData = await statsResponse.json();
+                    console.log('Dados stats:', statsData);
+                    resultDiv.innerHTML += '<p>✅ Stats: ' + JSON.stringify(statsData) + '</p>';
+                } else {
+                    const errorText = await statsResponse.text();
+                    console.error('Erro stats:', errorText);
+                    resultDiv.innerHTML += '<p>❌ Erro stats: ' + errorText + '</p>';
+                }
+
+                // Testar endpoint de ranking
+                console.log('Testando endpoint de ranking...');
+                const rankingResponse = await fetch('http://localhost:5000/api/rooms/I84OGJ/ranking');
+                console.log('Status ranking:', rankingResponse.status);
+                
+                if (rankingResponse.ok) {
+                    const rankingData = await rankingResponse.json();
+                    console.log('Dados ranking:', rankingData);
+                    resultDiv.innerHTML += '<p>✅ Ranking: ' + JSON.stringify(rankingData) + '</p>';
+                } else {
+                    const errorText = await rankingResponse.text();
+                    console.error('Erro ranking:', errorText);
+                    resultDiv.innerHTML += '<p>❌ Erro ranking: ' + errorText + '</p>';
+                }
+
+            } catch (error) {
+                console.error('Erro geral:', error);
+                resultDiv.innerHTML += '<p>❌ Erro geral: ' + error.message + '</p>';
+            }
+        }
+    </script>
+</body>
+</html>

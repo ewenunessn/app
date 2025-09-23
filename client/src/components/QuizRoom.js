@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
 import './QuizRoom.css';
+import { debugQuizFinish } from './debug-quiz-finish';
 
 function QuizRoom({ user }) {
   const { roomCode } = useParams();
@@ -17,8 +18,15 @@ function QuizRoom({ user }) {
   const [error, setError] = useState('');
   const [participants, setParticipants] = useState([]);
   const [showResults, setShowResults] = useState(false);
-  const [userStats, setUserStats] = useState(null);
+  const [userStats, setUserStats] = useState({
+    score: 0,
+    correct_answers: 0,
+    total_answers: 0,
+    accuracy: 0,
+    total_questions: 0
+  });
   const [ranking, setRanking] = useState([]);
+  const [resultsLoading, setResultsLoading] = useState(false);
 
   useEffect(() => {
     // Conectar ao socket
@@ -39,6 +47,7 @@ function QuizRoom({ user }) {
     });
 
     newSocket.on('quiz-finished', () => {
+      console.log('Socket: Quiz finalizado recebido');
       handleQuizFinished();
     });
 
@@ -137,6 +146,8 @@ function QuizRoom({ user }) {
           setTimeLeft(30);
         } else {
           // Fim do quiz
+          console.log('Fim do quiz alcançado - chamando handleQuizFinished');
+          console.log('Total de perguntas:', questions.length);
           handleQuizFinished();
         }
       }, 2000);
@@ -161,23 +172,65 @@ function QuizRoom({ user }) {
 
   const handleQuizFinished = async () => {
     try {
+      setResultsLoading(true);
+      console.log('Buscando estatísticas para usuário:', user.id, 'na sala:', roomCode);
+      
+      // Aguardar um pequeno delay para garantir que os dados sejam salvos
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       // Buscar estatísticas do usuário
       const statsResponse = await fetch(`http://localhost:5000/api/rooms/${roomCode}/users/${user.id}/stats`);
+      console.log('Resposta stats:', statsResponse.status, statsResponse.statusText);
+      
       if (statsResponse.ok) {
         const statsData = await statsResponse.json();
+        console.log('Dados de estatísticas:', statsData);
         setUserStats(statsData);
+      } else {
+        console.error('Erro ao buscar estatísticas:', statsResponse.status, statsResponse.statusText);
+        const errorText = await statsResponse.text();
+        console.error('Resposta erro:', errorText);
+        // Usar dados padrão se não conseguir buscar
+        setUserStats({
+          score: 0,
+          correct_answers: 0,
+          total_answers: 0,
+          accuracy: 0,
+          total_questions: questions.length || 0
+        });
       }
 
       // Buscar ranking
       const rankingResponse = await fetch(`http://localhost:5000/api/rooms/${roomCode}/ranking`);
+      console.log('Resposta ranking:', rankingResponse.status, rankingResponse.statusText);
+      
       if (rankingResponse.ok) {
         const rankingData = await rankingResponse.json();
+        console.log('Dados de ranking:', rankingData);
         setRanking(rankingData);
+      } else {
+        console.error('Erro ao buscar ranking:', rankingResponse.status, rankingResponse.statusText);
+        const errorText = await rankingResponse.text();
+        console.error('Resposta erro:', errorText);
+        // Usar ranking vazio se não conseguir buscar
+        setRanking([]);
       }
 
+      setResultsLoading(false);
       setShowResults(true);
     } catch (err) {
       console.error('Erro ao buscar resultados:', err);
+      setResultsLoading(false);
+      // Mostrar resultados mesmo com erro, usando dados padrão
+      setUserStats({
+        score: 0,
+        correct_answers: 0,
+        total_answers: 0,
+        accuracy: 0,
+        total_questions: questions.length || 0
+      });
+      setRanking([]);
+      setShowResults(true);
     }
   };
 
@@ -199,6 +252,12 @@ function QuizRoom({ user }) {
     } catch (err) {
       console.error('Erro ao finalizar quiz:', err);
     }
+  };
+
+  // Função de debug para testar o carregamento de resultados
+  const debugResults = () => {
+    console.log('=== INICIANDO DEBUG ===');
+    debugQuizFinish(roomCode, user.id);
   };
 
   if (isLoading) {
@@ -227,47 +286,61 @@ function QuizRoom({ user }) {
     return (
       <div className="quiz-results">
         <div className="results-container">
-          <div className="user-results">
-            <h2>🎉 Parabéns, {user.name}!</h2>
-            <div className="stats-grid">
-              <div className="stat-card">
-                <h3>Pontuação</h3>
-                <p className="stat-value">{userStats?.score || 0}</p>
-              </div>
-              <div className="stat-card">
-                <h3>Acertos</h3>
-                <p className="stat-value">
-                  {userStats?.correct_answers || 0}/{userStats?.total_answers || 0}
-                </p>
-              </div>
+          {resultsLoading ? (
+            <div className="results-loading">
+              <div className="loading-spinner">🔄</div>
+              <p>Carregando resultados...</p>
             </div>
-            
-            <div className="prize-message">
-              <h3>🏆 Você ganhou um brinde!</h3>
-              <p>Parabéns pela participação! Entre em contato com o organizador para receber seu prêmio.</p>
-            </div>
-          </div>
-
-          <div className="ranking-section">
-            <h3>Ranking Final</h3>
-            <div className="ranking-list">
-              {ranking && ranking.length > 0 && ranking.map((participant, index) => (
-                <div key={index} className={`ranking-item ${participant.name === user.name ? 'current-user' : ''}`}>
-                  <div className="rank-position">
-                    {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
-                  </div>
-                  <div className="rank-info">
-                    <span className="rank-name">{participant.name}</span>
-                    <span className="rank-score">{participant.score}</span>
-                  </div>
+          ) : (
+            <>
+              <div className="user-results">
+                <h2>🎉 Parabéns, {user.name}!</h2>
+                <div className="stats-grid">
+                <div className="stat-card">
+                  <h3>Pontuação</h3>
+                  <p className="stat-value">{userStats.score || 0}</p>
                 </div>
-              ))}
-            </div>
-          </div>
+                <div className="stat-card">
+                  <h3>Acertos</h3>
+                  <p className="stat-value">
+                    {userStats.correct_answers || 0}/{userStats.total_answers || 0}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="prize-message">
+                  <h3>🏆 Você ganhou um brinde!</h3>
+                  <p>Parabéns pela participação! Entre em contato com o organizador para receber seu prêmio.</p>
+                </div>
+              </div>
 
-          <button onClick={() => navigate('/dashboard')} className="back-button">
-            Voltar ao Dashboard
-          </button>
+              <div className="ranking-section">
+                <h3>Ranking Final</h3>
+                <div className="ranking-list">
+                  {ranking && ranking.length > 0 && ranking.map((participant, index) => (
+                    <div key={index} className={`ranking-item ${participant.name === user.name ? 'current-user' : ''}`}>
+                      <div className="rank-position">
+                        {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
+                      </div>
+                      <div className="rank-info">
+                        <span className="rank-name">{participant.name}</span>
+                        <span className="rank-score">{participant.score}</span>
+                      </div>
+                    </div>
+                  ))}
+                  {(!ranking || ranking.length === 0) && (
+                    <div className="no-ranking">
+                      <p>Sem dados de ranking disponíveis</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <button onClick={() => navigate('/dashboard')} className="back-button">
+                Voltar ao Dashboard
+              </button>
+            </>
+          )}
         </div>
       </div>
     );
@@ -298,6 +371,11 @@ function QuizRoom({ user }) {
               Iniciar Quiz
             </button>
           )}
+          
+          {/* Botão de debug para testar carregamento de resultados */}
+          <button onClick={debugResults} className="debug-button" style={{marginTop: '20px', background: '#ff9800'}}>
+            Debug: Testar Resultados
+          </button>
         </div>
       </div>
     );
