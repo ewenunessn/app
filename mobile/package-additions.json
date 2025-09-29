@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "react-native-fs": "^2.20.0",
+    "react-native-network-info": "^5.2.1",
+    "react-native-tcp-socket": "^6.0.6"
+  },
+  "note": "Adicione essas dependências ao package.json e execute: npm install"
+}

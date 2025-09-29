@@ -1,178 +1,171 @@
-# 🎯 Aplicativo Quiz Carol
+# Quiz App - Versões Web e Mobile
 
-Um aplicativo de quiz online multiplayer desenvolvido com React.js e Node.js, permitindo que usuários criem salas, respondam perguntas e compitam em tempo real!
+Aplicativo de quiz multiplayer com suporte para web e dispositivos móveis via Expo Go.
 
-## 🚀 Tecnologias Utilizadas
+## 🚀 Versões Disponíveis
 
-- **Frontend**: React.js, CSS3, Socket.io-client
-- **Backend**: Node.js, Express.js, Socket.io, PostgreSQL/SQLite
-- **Banco de Dados**: PostgreSQL (principal) com fallback para SQLite
-- **Autenticação**: JWT (JSON Web Tokens)
-- **Comunicação em Tempo Real**: WebSockets com Socket.io
+### 📱 Versão Web (Client)
+- **Localização**: `client/`
+- **Tecnologia**: React.js
+- **URL de desenvolvimento**: http://localhost:3000
+- **Comandos**:
+  ```bash
+  cd client
+  npm install
+  npm start
+  ```
+
+### 📱 Versão Mobile (Expo Go)
+- **Localização**: `mobile/`
+- **Tecnologia**: React Native + Expo
+- **URL de desenvolvimento**: http://localhost:8081 (web)
+- **Comandos**:
+  ```bash
+  cd mobile
+  npm install
+  npm start
+  ```
 
 ## 📋 Funcionalidades
 
-✅ **Cadastro de Usuários** - Crie seu perfil com avatar personalizado  
-✅ **Criação de Salas** - Crie salas de quiz com códigos únicos  
-✅ **Entrar em Salas** - Participe de salas existentes usando códigos  
-✅ **Quiz em Tempo Real** - Responda perguntas com contador regressivo  
-✅ **Ranking ao Vivo** - Veja a pontuação em tempo real  
-✅ **Interface Responsiva** - Funciona em desktop e mobile  
-✅ **Dados de Teste** - Perguntas pré-carregadas para testes  
+### ✨ Funcionalidades Completas
+- ✅ Criar salas de quiz
+- ✅ Entrar em salas existentes
+- ✅ Sistema de perguntas e respostas em tempo real
+- ✅ Ranking com pontuação ao vivo
+- ✅ Interface responsiva e moderna
+- ✅ Suporte para múltiplos participantes
+- ✅ Temporizador para respostas
+- ✅ Estatísticas detalhadas
 
-## 🛠️ Instalação e Configuração
+### 🎨 Telas do Aplicativo
+1. **Tela Inicial** - Criar sala ou entrar em sala existente
+2. **Criar Sala** - Configurar nova sala de quiz
+3. **Entrar na Sala** - Acessar sala com código
+4. **Quiz Room** - Responder perguntas em tempo real
+5. **Ranking** - Ver classificação geral
 
-### Pré-requisitos
-- Node.js (v14 ou superior)
-- PostgreSQL (opcional - o app funciona com SQLite como fallback)
-- npm ou yarn
+## 🛠️ Tecnologias Utilizadas
 
-### Passos de Instalação
+### Backend (Server)
+- Node.js + Express
+- Socket.io para comunicação em tempo real
+- MongoDB para banco de dados
+- JWT para autenticação
 
-1. **Clone o repositório**
-```bash
-git clone <url-do-repositorio>
-cd aplicativo-quiz-carol
-```
+### Frontend Web (Client)
+- React.js
+- Axios para requisições HTTP
+- Socket.io-client para comunicação em tempo real
+- CSS3 para estilização
 
-2. **Instale as dependências**
-```bash
-npm run install-all
-```
+### Mobile (Expo)
+- React Native
+- Expo SDK
+- React Navigation
+- Axios e Socket.io-client
+- Linear Gradient
 
-3. **Configure o banco de dados (PostgreSQL)**
+## 📱 Como usar o Expo Go
 
-   **Opção 1 - Configuração Automática:**
+1. **Instale o app Expo Go** no seu celular:
+   - iOS: [App Store](https://apps.apple.com/app/apple-store/id982107779)
+   - Android: [Google Play](https://play.google.com/store/apps/details?id=host.exp.exponent)
+
+2. **Inicie o servidor**:
    ```bash
-   npm run setup-db
+   cd mobile
+   npm start
    ```
 
-   **Opção 2 - Configuração Manual:**
-   - Crie um banco de dados PostgreSQL chamado `quiz_app`
-   - Configure as credenciais no arquivo `server/.env`:
-   ```
-   DB_HOST=localhost
-   DB_PORT=5432
-   DB_NAME=quiz_app
-   DB_USER=postgres
-   DB_PASSWORD=sua_senha
-   ```
+3. **Escaneie o QR Code** que aparece no terminal ou acesse http://localhost:8081 no navegador
 
-4. **Inicie a aplicação**
+4. **Teste no celular** usando o app Expo Go ou no navegador web
+
+## 🔧 Configuração
+
+### Variáveis de Ambiente
+
+#### Client Web (`.env`)
+```
+REACT_APP_API_URL=http://localhost:5000
+REACT_APP_SOCKET_URL=http://localhost:5000
+```
+
+#### Mobile (`src/config.js`)
+```javascript
+export const API_URL = 'http://localhost:5000';
+export const SOCKET_URL = 'http://localhost:5000';
+```
+
+#### Server (`.env`)
+```
+MONGODB_URI=mongodb://localhost:27017/quizapp
+JWT_SECRET=sua_chave_secreta
+PORT=5000
+```
+
+## 🚀 Como Executar Tudo
+
+### 1. Iniciar o Servidor
 ```bash
+cd server
+npm install
 npm start
 ```
 
-O aplicativo abrirá automaticamente no navegador em `http://localhost:3000`
+### 2. Iniciar Client Web
+```bash
+cd client
+npm install
+npm start
+```
 
-## 📁 Estrutura do Projeto
+### 3. Iniciar Mobile
+```bash
+cd mobile
+npm install
+npm start
+```
+
+## 📊 Estrutura do Projeto
 
 ```
-aplicativo-quiz-carol/
-├── client/                 # Frontend React
+Aplicativo Carol/
+├── server/          # Backend Node.js
+├── client/          # Frontend Web React
+├── mobile/          # Aplicativo Mobile Expo
 │   ├── src/
-│   │   ├── components/     # Componentes React
-│   │   │   ├── UserRegistration.js
-│   │   │   ├── Dashboard.js
-│   │   │   ├── QuizRoom.js
-│   │   │   └── QuestionCreator.js
-│   │   ├── App.js          # Componente principal
-│   │   └── App.css         # Estilos globais
-│   └── package.json
-├── server/                 # Backend Node.js
-│   ├── index.js           # Servidor principal
-│   ├── setup.js           # Configuração do banco
-│   ├── database.js        # SQLite fallback
-│   └── package.json
-├── start-app.js           # Script de inicialização
-└── package.json
+│   │   ├── screens/     # Telas do app
+│   │   ├── components/  # Componentes reutilizáveis
+│   │   ├── navigation/  # Navegação entre telas
+│   │   ├── services/    # API e Socket.io
+│   │   └── config.js   # Configurações
+│   └── App.tsx        # Arquivo principal
+└── README.md
 ```
 
-## 🎮 Como Usar
+## 🎯 Próximos Passos
 
-### 1. Cadastro de Usuário
-- Acesse `http://localhost:3000`
-- Digite seu nome e email
-- Escolha um avatar
-- Clique em "Começar"
+- [ ] Adicionar mais tipos de perguntas
+- [ ] Implementar sistema de temas personalizados
+- [ ] Adicionar sons e animações
+- [ ] Exportar resultados em PDF
+- [ ] Suporte para múltiplos idiomas
 
-### 2. Criar uma Sala
-- No dashboard, clique em "Criar Nova Sala"
-- Digite o nome da sala
-- O código da sala será gerado automaticamente
-- Compartilhe o código com outros jogadores
+## 💡 Dicas
 
-### 3. Entrar em uma Sala
-- No dashboard, digite o código da sala
-- Clique em "Entrar na Sala"
-- Aguarde outros jogadores entrarem
+- Use o **Expo Go** para testar rapidamente no celular
+- A versão web é ótima para testes e desenvolvimento
+- Ambas versões se conectam ao mesmo servidor backend
+- O Socket.io mantém tudo sincronizado em tempo real
 
-### 4. Jogar
-- O administrador da sala pode iniciar o quiz
-- Responda as perguntas antes do tempo acabar
-- Veja seu ranking em tempo real
-- Ao final, veja os resultados finais
+## 🐛 Bugs Conhecidos
 
-## 📝 Scripts Disponíveis
-
-- `npm start` - Inicia ambos os servidores (backend e frontend)
-- `npm run dev` - Inicia ambos os servidores com concurrently
-- `npm run server` - Inicia apenas o backend
-- `npm run client` - Inicia apenas o frontend
-- `npm run setup-db` - Configura o banco de dados
-- `npm run install-all` - Instala todas as dependências
-
-## 🔧 Configuração de Variáveis de Ambiente
-
-### Backend (server/.env)
-```
-# Banco de Dados
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=quiz_app
-DB_USER=postgres
-DB_PASSWORD=sua_senha
-
-# Servidor
-PORT=5000
-NODE_ENV=development
-
-# Segurança
-JWT_SECRET=sua_chave_secreta_aqui
-```
-
-## 🐛 Solução de Problemas
-
-### PostgreSQL não conecta?
-- Verifique se o PostgreSQL está rodando
-- Confirme as credenciais no arquivo `.env`
-- O app usará automaticamente o SQLite como fallback
-
-### Porta já em uso?
-- Backend usa porta 5000 por padrão
-- Frontend usa porta 3000 por padrão
-- Modifique no arquivo `.env` se necessário
-
-### Erro de CORS?
-- Verifique a configuração de CORS no backend
-- Certifique-se de que as URLs estão corretas
-
-## 🤝 Contribuindo
-
-1. Faça um fork do projeto
-2. Crie sua feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
-
-## 📝 Licença
-
-Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
-
-## 👥 Autor
-
-Desenvolvido com ❤️ para a Carol
+- Certifique-se de que o servidor esteja rodando antes de iniciar os clientes
+- Verifique as configurações de CORS no servidor
+- Para mobile, use o IP da sua máquina ao invés de localhost
 
 ---
 
-**⭐ Se este projeto foi útil, considere dar uma estrela no GitHub!**
+**Desenvolvido com ❤️ para Carol**
