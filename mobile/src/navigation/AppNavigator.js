@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Text } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 // Importe suas telas
 import QuizListScreen from '../screens/QuizListScreen';
@@ -52,9 +53,7 @@ function TabNavigator({ user, onLogout }) {
         options={{
           tabBarLabel: 'Quiz',
           tabBarIcon: ({ color, size }) => (
-            <View style={{ alignItems: 'center' }}>
-              <Text style={{ fontSize: 24, color }}>🏠</Text>
-            </View>
+            <Ionicons name="home-outline" size={size} color={color} />
           ),
         }}
       >
@@ -66,9 +65,7 @@ function TabNavigator({ user, onLogout }) {
         options={{
           tabBarLabel: 'Explorar',
           tabBarIcon: ({ color, size }) => (
-            <View style={{ alignItems: 'center' }}>
-              <Text style={{ fontSize: 24, color }}>🏆</Text>
-            </View>
+            <Ionicons name="compass-outline" size={size} color={color} />
           ),
         }}
       >
@@ -80,9 +77,7 @@ function TabNavigator({ user, onLogout }) {
         options={{
           tabBarLabel: 'Favoritos',
           tabBarIcon: ({ color, size }) => (
-            <View style={{ alignItems: 'center' }}>
-              <Text style={{ fontSize: 24, color }}>🔖</Text>
-            </View>
+            <Ionicons name="heart-outline" size={size} color={color} />
           ),
         }}
       >
@@ -94,9 +89,7 @@ function TabNavigator({ user, onLogout }) {
         options={{
           tabBarLabel: 'Configurações',
           tabBarIcon: ({ color, size }) => (
-            <View style={{ alignItems: 'center' }}>
-              <Text style={{ fontSize: 24, color }}>⚙️</Text>
-            </View>
+            <Ionicons name="settings-outline" size={size} color={color} />
           ),
         }}
       >

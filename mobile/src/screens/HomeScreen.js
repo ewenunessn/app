@@ -15,7 +15,6 @@ import { API_CONFIG } from '../config';
 export default function HomeScreen({ navigation, user }) {
   const { colors } = useTheme();
   const [featuredQuiz, setFeaturedQuiz] = useState(null);
-  const [quizCategories, setQuizCategories] = useState([]);
   const [moreGames, setMoreGames] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -28,7 +27,6 @@ export default function HomeScreen({ navigation, user }) {
       setLoading(true);
       await Promise.all([
         fetchFeaturedQuiz(),
-        fetchQuizCategories(),
         fetchMoreGames()
       ]);
     } catch (error) {
@@ -52,53 +50,7 @@ export default function HomeScreen({ navigation, user }) {
     }
   };
 
-  const fetchQuizCategories = async () => {
-    try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/api/quiz`);
-      if (response.ok) {
-        const quizzes = await response.json();
-        
-        // Criar categorias baseadas nos quizzes reais
-        const categories = [
-          { id: 1, name: 'Ciências', icon: '🔬', color: '#4CAF50', count: 0 },
-          { id: 2, name: 'História', icon: '🏛️', color: '#FF9800', count: 0 },
-          { id: 3, name: 'Geografia', icon: '🌍', color: '#2196F3', count: 0 },
-          { id: 4, name: 'Matemática', icon: '📊', color: '#9C27B0', count: 0 },
-          { id: 5, name: 'Literatura', icon: '📚', color: '#F44336', count: 0 },
-        ];
 
-        // Contar quizzes por categoria (baseado no título/descrição)
-        quizzes.forEach(quiz => {
-          const title = quiz.title.toLowerCase();
-          const description = quiz.description.toLowerCase();
-          
-          if (title.includes('ciência') || title.includes('biologia') || title.includes('física') || title.includes('química')) {
-            categories[0].count++;
-          } else if (title.includes('história') || title.includes('histórico')) {
-            categories[1].count++;
-          } else if (title.includes('geografia') || title.includes('mundo') || title.includes('país')) {
-            categories[2].count++;
-          } else if (title.includes('matemática') || title.includes('número') || title.includes('cálculo')) {
-            categories[3].count++;
-          } else if (title.includes('literatura') || title.includes('livro') || title.includes('autor')) {
-            categories[4].count++;
-          }
-        });
-
-        setQuizCategories(categories);
-      }
-    } catch (error) {
-      console.error('Erro ao buscar categorias:', error);
-      // Fallback para categorias padrão
-      setQuizCategories([
-        { id: 1, name: 'Ciências', icon: '🔬', color: '#4CAF50', count: 0 },
-        { id: 2, name: 'História', icon: '🏛️', color: '#FF9800', count: 0 },
-        { id: 3, name: 'Geografia', icon: '🌍', color: '#2196F3', count: 0 },
-        { id: 4, name: 'Matemática', icon: '📊', color: '#9C27B0', count: 0 },
-        { id: 5, name: 'Literatura', icon: '📚', color: '#F44336', count: 0 },
-      ]);
-    }
-  };
 
   const fetchMoreGames = async () => {
     try {
@@ -147,9 +99,7 @@ export default function HomeScreen({ navigation, user }) {
     navigation.navigate('QuizPresentation', { quiz, user });
   };
 
-  const handleCategoryPress = (category) => {
-    navigation.navigate('Explore', { category });
-  };
+
 
   const handleMoreGamePress = (game) => {
     if (game.quiz) {
@@ -172,13 +122,6 @@ export default function HomeScreen({ navigation, user }) {
               </View>
               <View>
                 <Text style={styles.userName}>{user.name}</Text>
-                <Text style={styles.userLevel}>Expert</Text>
-              </View>
-            </View>
-            <View style={styles.pointsContainer}>
-              <View style={styles.pointsBadge}>
-                <Text style={styles.pointsIcon}>⚡</Text>
-                <Text style={styles.pointsText}>1200</Text>
               </View>
             </View>
           </View>
@@ -212,37 +155,7 @@ export default function HomeScreen({ navigation, user }) {
             </TouchableOpacity>
           )}
 
-          {/* Seção de Categorias */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Quiz</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Explore')}>
-                <Text style={styles.viewAllText}>Ver Todos</Text>
-              </TouchableOpacity>
-            </View>
-            
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              style={styles.categoriesContainer}
-            >
-              {quizCategories.map((category) => (
-                <TouchableOpacity
-                  key={category.id}
-                  style={styles.categoryCard}
-                  onPress={() => handleCategoryPress(category)}
-                >
-                  <View style={[styles.categoryIcon, { backgroundColor: category.color }]}>
-                    <Text style={styles.categoryEmoji}>{category.icon}</Text>
-                  </View>
-                  <Text style={styles.categoryName}>{category.name}</Text>
-                  {category.count > 0 && (
-                    <Text style={styles.categoryCount}>{category.count}</Text>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
+
 
           {/* Seção Mais Jogos */}
           <View style={styles.section}>
@@ -336,30 +249,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
-  userLevel: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
-  },
-  pointsContainer: {
-    alignItems: 'flex-end',
-  },
-  pointsBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FF6B35',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  pointsIcon: {
-    fontSize: 16,
-    marginRight: 4,
-  },
-  pointsText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
+
   featuredQuizCard: {
     backgroundColor: 'rgba(255,255,255,0.15)',
     marginHorizontal: 20,
@@ -447,36 +337,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255,255,255,0.8)',
   },
-  categoriesContainer: {
-    paddingLeft: 20,
-  },
-  categoryCard: {
-    alignItems: 'center',
-    marginRight: 20,
-    width: 80,
-  },
-  categoryIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  categoryEmoji: {
-    fontSize: 24,
-  },
-  categoryName: {
-    fontSize: 12,
-    color: '#FFFFFF',
-    textAlign: 'center',
-  },
-  categoryCount: {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.8)',
-    textAlign: 'center',
-    marginTop: 2,
-  },
+
   gamesGrid: {
     flexDirection: 'row',
     paddingHorizontal: 20,
