@@ -18,6 +18,7 @@ import HomeScreen from '../screens/HomeScreen';
 import ExploreScreen from '../screens/ExploreScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import AboutScreen from '../screens/AboutScreen';
+import ManageMainQuizScreen from '../screens/ManageMainQuizScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -132,6 +133,16 @@ export default function AppNavigator({ user, onLogout }) {
 
         {/* Tela Sobre */}
         <Stack.Screen name="About" component={AboutScreen} />
+
+        {/* Tela de Gerenciar Quiz Principal */}
+        <Stack.Screen
+          name="ManageMainQuiz"
+          options={{
+            headerShown: false,
+          }}
+        >
+          {(props) => <ManageMainQuizScreen {...props} user={user} />}
+        </Stack.Screen>
 
         {/* Fluxo do Quiz */}
         <Stack.Screen name="QuizPresentation" component={QuizPresentationScreen} />

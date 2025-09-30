@@ -36,6 +36,10 @@ export default function SettingsScreen({ navigation, user, onLogout }) {
     );
   };
 
+  const handleManageMainQuiz = () => {
+    navigation.navigate('ManageMainQuiz', { user });
+  };
+
   const settingsOptions = [
     {
       id: 1,
@@ -47,6 +51,14 @@ export default function SettingsScreen({ navigation, user, onLogout }) {
     },
     {
       id: 2,
+      title: 'Quiz Principal',
+      subtitle: 'Definir quiz da tela inicial',
+      icon: '🎯',
+      onPress: handleManageMainQuiz,
+      color: '#FF9800'
+    },
+    {
+      id: 3,
       title: 'Sobre',
       subtitle: 'Informações do app',
       icon: 'ℹ️',
@@ -54,7 +66,7 @@ export default function SettingsScreen({ navigation, user, onLogout }) {
       color: '#607D8B'
     },
     {
-      id: 3,
+      id: 4,
       title: 'Sair',
       subtitle: 'Fazer logout da conta',
       icon: '🚪',

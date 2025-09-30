@@ -4,8 +4,8 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
-  ImageBackground,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,98 +14,61 @@ import { API_CONFIG } from '../config';
 
 export default function HomeScreen({ navigation, user }) {
   const { colors } = useTheme();
-  const [featuredQuiz, setFeaturedQuiz] = useState(null);
-  const [moreGames, setMoreGames] = useState([]);
+  const [mainQuiz, setMainQuiz] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchAllData();
+    fetchMainQuiz();
   }, []);
 
-  const fetchAllData = async () => {
+  const fetchMainQuiz = async () => {
     try {
       setLoading(true);
-      await Promise.all([
-        fetchFeaturedQuiz(),
-        fetchMoreGames()
-      ]);
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/main-quiz`);
+      if (response.ok) {
+        const quiz = await response.json();
+        setMainQuiz(quiz);
+      }
     } catch (error) {
-      console.error('Erro ao buscar dados:', error);
+      console.error('Erro ao buscar quiz principal:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchFeaturedQuiz = async () => {
-    try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/api/quiz`);
-      if (response.ok) {
-        const quizzes = await response.json();
-        if (quizzes.length > 0) {
-          setFeaturedQuiz(quizzes[0]); // Primeiro quiz como destaque
-        }
-      }
-    } catch (error) {
-      console.error('Erro ao buscar quiz em destaque:', error);
+  const handlePlayPress = () => {
+    if (mainQuiz) {
+      navigation.navigate('QuizPresentation', { quiz: mainQuiz, user });
+    } else {
+      Alert.alert(
+        'Nenhum Quiz Disponível',
+        'Não há quiz principal configurado. Configure um quiz nas configurações.',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { 
+            text: 'Configurar', 
+            onPress: () => navigation.navigate('Settings')
+          }
+        ]
+      );
     }
   };
 
-
-
-  const fetchMoreGames = async () => {
-    try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/api/quiz`);
-      if (response.ok) {
-        const quizzes = await response.json();
-        
-        // Pegar os 2 primeiros quizzes para "Mais Jogos"
-        const gamesData = quizzes.slice(0, 2).map((quiz, index) => ({
-          id: quiz.id,
-          title: quiz.title,
-          subtitle: `${quiz.question_count || quiz.questionCount || 10} Questões`,
-          icon: index === 0 ? '⚔️' : '🧭',
-          quiz: quiz,
-          // Simular estatísticas baseadas no ID do quiz
-          winRate: `${(quiz.id * 3.7) % 30 + 10}%`
-        }));
-        
-        setMoreGames(gamesData);
-      }
-    } catch (error) {
-      console.error('Erro ao buscar mais jogos:', error);
-      // Fallback para dados padrão
-      setMoreGames([
-        {
-          id: 1,
-          title: 'Quiz Geral',
-          subtitle: '10 Questões',
-          icon: '⚔️',
-          winRate: '24.7%',
-          quiz: null
-        },
-        {
-          id: 2,
-          title: 'Quiz Avançado',
-          subtitle: '15 Questões',
-          icon: '🧭',
-          winRate: '12.5%',
-          quiz: null
-        }
-      ]);
-    }
-  };
-
-  const handleQuizPress = (quiz) => {
-    navigation.navigate('QuizPresentation', { quiz, user });
-  };
-
-
-
-  const handleMoreGamePress = (game) => {
-    if (game.quiz) {
-      navigation.navigate('QuizPresentation', { quiz: game.quiz, user });
-    }
-  };
+  if (loading) {
+    return (
+      <LinearGradient
+        colors={[colors.primary, colors.secondary]}
+        style={styles.container}
+      >
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#FFFFFF" />
+            <Text style={styles.loadingText}>Carregando...</Text>
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
+    );
+  }
 
   return (
     <LinearGradient
@@ -113,101 +76,86 @@ export default function HomeScreen({ navigation, user }) {
       style={styles.container}
     >
       <SafeAreaView style={styles.safeArea}>
-        <ScrollView showsVerticalScrollIndicator={false}>
-          {/* Header com perfil do usuário */}
-          <View style={styles.header}>
-            <View style={styles.profileSection}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{user.avatar || '👤'}</Text>
-              </View>
-              <View>
-                <Text style={styles.userName}>{user.name}</Text>
-              </View>
+        {/* Header com perfil do usuário */}
+        <View style={styles.header}>
+          <View style={styles.profileSection}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{user.avatar || '👤'}</Text>
+            </View>
+            <View>
+              <Text style={styles.userName}>{user.name}</Text>
             </View>
           </View>
+        </View>
 
-          {/* Quiz em Destaque */}
-          {featuredQuiz && (
-            <TouchableOpacity 
-              style={styles.featuredQuizCard}
-              onPress={() => handleQuizPress(featuredQuiz)}
-            >
-              <View style={styles.featuredQuizContent}>
-                <View style={styles.featuredQuizIcon}>
-                  <Text style={styles.featuredQuizEmoji}>🎯</Text>
-                </View>
-                <View style={styles.featuredQuizInfo}>
-                  <Text style={styles.featuredQuizTitle}>Quiz do Dia</Text>
-                  <Text style={styles.featuredQuizSubtitle}>
-                    {featuredQuiz.question_count || 10} Questões
-                  </Text>
-                  <View style={styles.progressContainer}>
-                    <View style={styles.progressBar}>
-                      <View style={[styles.progressFill, { width: '60%' }]} />
-                    </View>
-                    <Text style={styles.progressText}>6/10</Text>
-                  </View>
-                </View>
-                <TouchableOpacity style={styles.playButton}>
-                  <Text style={styles.playButtonIcon}>▶️</Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
+        {/* Conteúdo Central */}
+        <View style={styles.centerContent}>
+          {/* Logo/Ícone do App */}
+          <View style={styles.appIcon}>
+            <Text style={styles.appIconText}>🎯</Text>
+          </View>
+
+          {/* Título do Quiz */}
+          {mainQuiz ? (
+            <View style={styles.quizInfo}>
+              <Text style={styles.quizTitle}>{mainQuiz.title}</Text>
+              <Text style={styles.quizSubtitle}>
+                {mainQuiz.question_count || 10} questões • Pronto para começar?
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.quizInfo}>
+              <Text style={styles.quizTitle}>Quiz Educativo</Text>
+              <Text style={styles.quizSubtitle}>
+                Nenhum quiz principal configurado
+              </Text>
+            </View>
           )}
 
-
-
-          {/* Seção Mais Jogos */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Mais Jogos</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Explore')}>
-                <Text style={styles.viewAllText}>Ver Todos</Text>
-              </TouchableOpacity>
+          {/* Botão de Play Principal */}
+          <TouchableOpacity 
+            style={[
+              styles.playButton,
+              !mainQuiz && styles.playButtonDisabled
+            ]}
+            onPress={handlePlayPress}
+          >
+            <View style={styles.playButtonInner}>
+              <Text style={styles.playIcon}>▶</Text>
             </View>
-            
-            <View style={styles.gamesGrid}>
-              {moreGames.map((game) => (
-                <TouchableOpacity 
-                  key={game.id}
-                  style={styles.gameCard}
-                  onPress={() => handleMoreGamePress(game)}
-                >
-                  <View style={styles.gameIcon}>
-                    <Text style={styles.gameEmoji}>{game.icon}</Text>
-                  </View>
-                  <Text style={styles.gameTitle} numberOfLines={2}>
-                    {game.title}
-                  </Text>
-                  <Text style={styles.gameSubtitle}>{game.subtitle}</Text>
-                  <View style={styles.gameStats}>
-                    <Text style={styles.gameStatsText}>👑 {game.winRate}</Text>
-                    <View style={styles.gamePlayButton}>
-                      <Text style={styles.gamePlayIcon}>⚡</Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
-              
-              {/* Se não houver quizzes suficientes, mostrar cards vazios */}
-              {moreGames.length < 2 && (
-                <TouchableOpacity 
-                  style={[styles.gameCard, styles.emptyGameCard]}
-                  onPress={() => navigation.navigate('CreateQuiz', { user })}
-                >
-                  <View style={styles.gameIcon}>
-                    <Text style={styles.gameEmoji}>➕</Text>
-                  </View>
-                  <Text style={styles.gameTitle}>Criar Quiz</Text>
-                  <Text style={styles.gameSubtitle}>Novo desafio</Text>
-                  <View style={styles.gameStats}>
-                    <Text style={styles.gameStatsText}>Começar</Text>
-                  </View>
-                </TouchableOpacity>
-              )}
+            <Text style={styles.playText}>
+              {mainQuiz ? 'JOGAR' : 'CONFIGURAR'}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Informações adicionais */}
+          {mainQuiz && (
+            <View style={styles.additionalInfo}>
+              <View style={styles.infoItem}>
+                <Text style={styles.infoIcon}>⏱️</Text>
+                <Text style={styles.infoText}>~5 min</Text>
+              </View>
+              <View style={styles.infoItem}>
+                <Text style={styles.infoIcon}>🏆</Text>
+                <Text style={styles.infoText}>Ganhe pontos</Text>
+              </View>
+              <View style={styles.infoItem}>
+                <Text style={styles.infoIcon}>🎁</Text>
+                <Text style={styles.infoText}>Prêmios</Text>
+              </View>
             </View>
-          </View>
-        </ScrollView>
+          )}
+        </View>
+
+        {/* Footer com dica */}
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>
+            {mainQuiz 
+              ? 'Toque no botão para começar o quiz' 
+              : 'Configure um quiz principal nas configurações'
+            }
+          </Text>
+        </View>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -220,9 +168,19 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    marginTop: 10,
+  },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 10,
@@ -249,155 +207,112 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
-
-  featuredQuizCard: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    marginHorizontal: 20,
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 30,
-  },
-  featuredQuizContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  featuredQuizIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+  centerContent: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 15,
+    paddingHorizontal: 40,
   },
-  featuredQuizEmoji: {
-    fontSize: 30,
+  appIcon: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 40,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
-  featuredQuizInfo: {
-    flex: 1,
+  appIconText: {
+    fontSize: 60,
   },
-  featuredQuizTitle: {
+  quizInfo: {
+    alignItems: 'center',
+    marginBottom: 50,
+  },
+  quizTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  quizSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.8)',
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  playButton: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  playButtonInner: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 6,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 12,
+  },
+  playButtonDisabled: {
+    opacity: 0.6,
+  },
+  playIcon: {
+    fontSize: 40,
+    color: '#FF6B35',
+    marginLeft: 5, // Ajuste visual para centralizar o ícone
+  },
+  playText: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#FFFFFF',
-    marginBottom: 4,
+    letterSpacing: 2,
   },
-  featuredQuizSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
-    marginBottom: 10,
-  },
-  progressContainer: {
+  additionalInfo: {
     flexDirection: 'row',
-    alignItems: 'center',
+    justifyContent: 'space-around',
+    width: '100%',
+    paddingHorizontal: 20,
   },
-  progressBar: {
+  infoItem: {
+    alignItems: 'center',
     flex: 1,
-    height: 6,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 3,
-    marginRight: 10,
   },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#FF6B35',
-    borderRadius: 3,
-  },
-  progressText: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.8)',
-  },
-  playButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  playButtonIcon: {
-    fontSize: 16,
-  },
-  section: {
-    marginBottom: 30,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 15,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  viewAllText: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
-  },
-
-  gamesGrid: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    justifyContent: 'space-between',
-  },
-  gameCard: {
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    borderRadius: 20,
-    padding: 20,
-    width: '48%',
-  },
-  gameIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#F0F0F0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  gameEmoji: {
+  infoIcon: {
     fontSize: 24,
+    marginBottom: 8,
   },
-  gameTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
-  },
-  gameSubtitle: {
+  infoText: {
     fontSize: 12,
-    color: '#666',
-    marginBottom: 15,
+    color: 'rgba(255,255,255,0.8)',
+    textAlign: 'center',
   },
-  gameStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  footer: {
+    paddingHorizontal: 20,
+    paddingBottom: 30,
     alignItems: 'center',
   },
-  gameStatsText: {
-    fontSize: 12,
-    color: '#FF6B35',
-    fontWeight: 'bold',
-  },
-  gamePlayButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#FF6B35',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  gamePlayIcon: {
-    fontSize: 12,
-    color: '#FFFFFF',
-  },
-  emptyGameCard: {
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderStyle: 'dashed',
-    backgroundColor: 'rgba(255,255,255,0.1)',
+  footerText: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.6)',
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 });

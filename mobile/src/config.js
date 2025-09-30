@@ -4,8 +4,8 @@
 
 // Configuração da API
 export const API_CONFIG = {
-    BASE_URL: 'https://quiz-educativo-api.vercel.app',
-    FALLBACK_URL: 'http://192.168.1.100:5000',
+    BASE_URL: 'http://localhost:3001',
+    FALLBACK_URL: 'https://quiz-educativo-api.vercel.app',
     TIMEOUT: 10000, // 10 segundos
 };
 
